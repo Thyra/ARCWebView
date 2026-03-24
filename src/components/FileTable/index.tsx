@@ -1,7 +1,12 @@
+import { useState } from 'react'
 import {IconButton, Link, Truncate, useResponsiveValue } from '@primer/react'
 import {Table, DataTable} from '@primer/react/experimental'
+import { JsonController } from '@nfdi4plants/arctrl'
 import { type TreeNode } from '../../util/types'
 import Icons from '../Icons'
+import FileProvenanceViewer from '../FileProvenanceViewer'
+
+type LDGraph = ReturnType<typeof JsonController.LDGraph.fromROCrateJsonString>;
 
 
 function sortTreeNode(node: TreeNode | undefined): TreeNode[] {
@@ -17,9 +22,10 @@ function sortTreeNode(node: TreeNode | undefined): TreeNode[] {
 interface HeaderProps {
   navigateTo: (path: string) => void;
   responsiveValue: "narrow" | "regular" | "wide"
+  onShowProvenance?: (file: TreeNode) => void;
 }
 
-const mkHeader = ({navigateTo, responsiveValue}: HeaderProps) => {
+const mkHeader = ({navigateTo, responsiveValue, onShowProvenance}: HeaderProps) => {
     return [
       {
         id: 'icon',
@@ -88,12 +94,40 @@ const mkHeader = ({navigateTo, responsiveValue}: HeaderProps) => {
         header: "File Size",
         renderCell: (row: TreeNode) => {
           return (
-            row.contentSize 
+            row.contentSize
               ? <div style={{width: "content-min"}}>
                 <Truncate title={row.contentSize} maxWidth="200px">{row.contentSize}</Truncate >
               </div>
               : null
           )
+        },
+      },
+      {
+        id: 'provenance',
+        width: 'auto',
+        minWidth: '50px',
+        align: 'end',
+        header: 'Provenance',
+        renderCell: (row: TreeNode) => {
+          return row.sha256 ? (
+            <button
+              aria-label={`Show provenance: ${row.name}`}
+              title={`Show provenance: ${row.name}`}
+              onClick={() => onShowProvenance?.(row)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                fontSize: '1.2em',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              🔗
+            </button>
+          ) : null;
         },
       },
       {
@@ -104,7 +138,7 @@ const mkHeader = ({navigateTo, responsiveValue}: HeaderProps) => {
         header: 'Download',
         renderCell: (row: TreeNode) => {
           return (
-            row.sha256 
+            row.sha256
               ? <IconButton
                 as="a"
                 href={`https://lfs-resolver.nfdi4plants.org/presigned-url/?oid=${row.sha256}`}
@@ -125,25 +159,34 @@ interface FileTableProps {
   loading: boolean;
   currentTreeNode: TreeNode | undefined;
   navigateTo: (path: string) => void;
+  ldGraph?: LDGraph;
 }
 
-export default function FileTable({ loading, currentTreeNode, navigateTo }: FileTableProps) {
+export default function FileTable({ loading, currentTreeNode, navigateTo, ldGraph }: FileTableProps) {
+  const [showProvenance, setShowProvenance] = useState(false);
+  const [selectedFileForProvenance, setSelectedFileForProvenance] = useState<TreeNode | undefined>();
+
+  const handleShowProvenance = (file: TreeNode) => {
+    setSelectedFileForProvenance(file);
+    setShowProvenance(true);
+  };
 
   const headerVal = useResponsiveValue(
     {
-      narrow: mkHeader({ navigateTo, responsiveValue: 'narrow' }),
-      regular: mkHeader({ navigateTo, responsiveValue: 'regular' }),
-      wide: mkHeader({ navigateTo, responsiveValue: 'wide' }),
-    }, 
-    mkHeader({ navigateTo, responsiveValue: 'regular' })
+      narrow: mkHeader({ navigateTo, responsiveValue: 'narrow', onShowProvenance: handleShowProvenance }),
+      regular: mkHeader({ navigateTo, responsiveValue: 'regular', onShowProvenance: handleShowProvenance }),
+      wide: mkHeader({ navigateTo, responsiveValue: 'wide', onShowProvenance: handleShowProvenance }),
+    },
+    mkHeader({ navigateTo, responsiveValue: 'regular', onShowProvenance: handleShowProvenance })
   )
 
   return (
+    <>
       <Table.Container>
         {/* <Table.Actions>
           <Button>Action</Button>
         </Table.Actions> */}
-        { loading 
+        { loading
           ? <Table.Skeleton
             aria-labelledby="repositories-loading"
             cellPadding="condensed"
@@ -161,5 +204,36 @@ export default function FileTable({ loading, currentTreeNode, navigateTo }: File
           />
         }
       </Table.Container>
+
+      {showProvenance && selectedFileForProvenance && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+          }}
+          onClick={() => setShowProvenance(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '900px' }}
+          >
+            <FileProvenanceViewer
+              fileNode={selectedFileForProvenance}
+              onClose={() => setShowProvenance(false)}
+              ldGraph={ldGraph}
+            />
+          </div>
+        </div>
+      )}
+    </>
   )
 }
