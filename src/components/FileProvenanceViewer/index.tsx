@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useRef } from 'react';
+import { useState, useEffect, useId } from 'react';
 import mermaid from '../../util/mermaid';
 import { Table, DataTable, type UniqueRow, type Column } from '@primer/react/experimental';
 import { JsonController, ROCrate } from '@nfdi4plants/arctrl';
@@ -216,21 +216,17 @@ function generateMermaidDiagram(graph: ProvenanceGraph): string {
 
 interface FileProvenanceViewerProps {
   fileNode?: TreeNode;
-  onClose?: () => void;
   ldGraph?: LDGraph;
 }
 
 export default function FileProvenanceViewer({
   fileNode,
-  onClose,
   ldGraph
 }: FileProvenanceViewerProps) {
-  const fileName = fileNode?.name || 'output.fastq';
   const [activeTab, setActiveTab] = useState<'diagram' | 'details'>('diagram');
   const [svgContent, setSvgContent] = useState<string>('');
   const [provenance, setProvenance] = useState<ProvenanceGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const mermaidRef = useRef<HTMLDivElement>(null);
   const renderId = `provenance-${useId().replace(/[^\w-]/g, '')}`;
 
   useEffect(() => {
@@ -278,18 +274,8 @@ export default function FileProvenanceViewer({
 
   if (error || !provenance) {
     return (
-      <div
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          maxWidth: '1000px',
-          maxHeight: '90vh',
-          padding: '24px',
-          textAlign: 'center',
-        }}
-      >
-        <h2 style={{ margin: '0 0 12px 0' }}>No Provenance Available</h2>
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <h3 style={{ margin: '0 0 12px 0' }}>No Provenance Available</h3>
         <p style={{ margin: 0, color: '#666' }}>
           {error || "Could not load provenance data for this file."}
         </p>
@@ -298,45 +284,7 @@ export default function FileProvenanceViewer({
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-        maxWidth: '1000px',
-        maxHeight: '90vh',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid #e1e4e8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ margin: '0 0 2px 0', fontSize: '1.3em' }}>File Provenance</h2>
-          <p style={{ margin: 0, fontSize: '0.85em', color: '#666' }}>{fileName}</p>
-        </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5em',
-              cursor: 'pointer',
-              color: '#666',
-              padding: '0',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
+    <div>
       <div style={{ display: 'flex', borderBottom: '1px solid #e1e4e8' }}>
         <button
           onClick={() => setActiveTab('diagram')}
@@ -372,9 +320,8 @@ export default function FileProvenanceViewer({
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: activeTab === 'diagram' ? 'block' : 'none' }}>
+      <div style={{ padding: '16px', display: activeTab === 'diagram' ? 'block' : 'none' }}>
         <div
-          ref={mermaidRef}
           dangerouslySetInnerHTML={{ __html: svgContent }}
           style={{
             display: 'flex',
@@ -385,7 +332,7 @@ export default function FileProvenanceViewer({
         />
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: activeTab === 'details' ? 'block' : 'none', fontSize: '0.9em' }}>
+      <div style={{ padding: '12px', display: activeTab === 'details' ? 'block' : 'none', fontSize: '0.9em' }}>
         <div>
           <h3 style={{ margin: '0 0 8px 0', fontSize: '1em', borderBottom: '2px solid #e1e4e8', paddingBottom: '4px' }}>Nodes</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

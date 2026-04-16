@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {IconButton, Link, Truncate, useResponsiveValue } from '@primer/react'
-import {Table, DataTable} from '@primer/react/experimental'
+import {Table, DataTable, Dialog} from '@primer/react/experimental'
 import { JsonController } from '@nfdi4plants/arctrl'
 import { type TreeNode } from '../../util/types'
 import Icons from '../Icons'
@@ -206,33 +206,18 @@ export default function FileTable({ loading, currentTreeNode, navigateTo, ldGrap
       </Table.Container>
 
       {showProvenance && selectedFileForProvenance && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '20px',
-          }}
-          onClick={() => setShowProvenance(false)}
+        <Dialog
+          title="File Provenance"
+          subtitle={selectedFileForProvenance.name}
+          onClose={() => setShowProvenance(false)}
+          width="xlarge"
+          height="large"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '900px' }}
-          >
-            <FileProvenanceViewer
-              fileNode={selectedFileForProvenance}
-              onClose={() => setShowProvenance(false)}
-              ldGraph={ldGraph}
-            />
-          </div>
-        </div>
+          <FileProvenanceViewer
+            fileNode={selectedFileForProvenance}
+            ldGraph={ldGraph}
+          />
+        </Dialog>
       )}
     </>
   )
