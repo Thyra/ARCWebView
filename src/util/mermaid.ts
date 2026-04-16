@@ -8,7 +8,7 @@ mermaid.initialize({
     nodeSpacing: 30,
     rankSpacing: 40,
   },
-  securityLevel: 'loose',
+  securityLevel: 'strict',
 });
 
 export default mermaid;

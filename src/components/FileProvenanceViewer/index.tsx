@@ -178,18 +178,28 @@ function getNodeColor(type: string): string {
   return "#424242";
 }
 
+function escapeMermaidLabel(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\|/g, '&#124;')
+    .replace(/[\r\n]+/g, ' ');
+}
+
 function generateMermaidDiagram(graph: ProvenanceGraph): string {
   const nodes = graph.nodes.map((node) => {
     const safeId = node.id.replace(/[^\w-]/g, '_');
-    const typeClass = node.type.replace(/\s+/g, '_').toLowerCase();
+    const typeClass = node.type.replace(/[^\w-]/g, '_').toLowerCase() || 'unknown';
     const cleanLabel = node.label.replace(/^#(Source_|Sample_)/, '');
-    return `${safeId}["${cleanLabel}<br/><sub>${node.type}</sub>"]:::${typeClass}`;
+    return `${safeId}["${escapeMermaidLabel(cleanLabel)}<br/><sub>${escapeMermaidLabel(node.type)}</sub>"]:::${typeClass}`;
   }).join('\n    ');
 
   const edges = graph.edges.map((edge) => {
     const fromId = edge.from.replace(/[^\w-]/g, '_');
     const toId = edge.to.replace(/[^\w-]/g, '_');
-    return `${fromId} -->|${edge.label}| ${toId}`;
+    return `${fromId} -->|"${escapeMermaidLabel(edge.label)}"| ${toId}`;
   }).join('\n    ');
 
   const classDefinitions = `
