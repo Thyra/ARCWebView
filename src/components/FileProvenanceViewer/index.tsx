@@ -66,30 +66,34 @@ function extractNodeMetadata(node: LDNode, ldGraph: LDGraph, context: LDContext)
 }
 
 function filterToSubgraph(graph: ProvenanceGraph, targetNodeId: string): ProvenanceGraph {
-  const reachableNodes = new Set<string>();
+  // Precompute incoming edges by target id so the traversal is linear in the
+  // reachable subgraph instead of O(V*E).
+  const incomingByTo = new Map<string, ProvenanceEdge[]>();
+  graph.edges.forEach((edge) => {
+    const list = incomingByTo.get(edge.to);
+    if (list) list.push(edge);
+    else incomingByTo.set(edge.to, [edge]);
+  });
+
+  const reachableNodes = new Set<string>([targetNodeId]);
   const reachableEdges: ProvenanceEdge[] = [];
+  const stack = [targetNodeId];
 
-  // BFS backwards from target to find all nodes that lead to it
-  const queue = [targetNodeId];
-  reachableNodes.add(targetNodeId);
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    const incomingEdges = incomingByTo.get(current);
+    if (!incomingEdges) continue;
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-
-    // Find all edges that have current as target
-    const incomingEdges = graph.edges.filter(e => e.to === current);
-
-    incomingEdges.forEach(edge => {
+    incomingEdges.forEach((edge) => {
       reachableEdges.push(edge);
       if (!reachableNodes.has(edge.from)) {
         reachableNodes.add(edge.from);
-        queue.push(edge.from);
+        stack.push(edge.from);
       }
     });
   }
 
-  // Filter nodes to only those that are reachable
-  const filteredNodes = graph.nodes.filter(node => reachableNodes.has(node.id));
+  const filteredNodes = graph.nodes.filter((node) => reachableNodes.has(node.id));
 
   return {
     nodes: filteredNodes,
