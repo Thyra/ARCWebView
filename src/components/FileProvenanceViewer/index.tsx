@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import mermaid from '../../util/mermaid';
 import { Table, DataTable, type UniqueRow, type Column } from '@primer/react/experimental';
 import { JsonController, ROCrate } from '@nfdi4plants/arctrl';
@@ -232,6 +232,7 @@ export default function FileProvenanceViewer({
   const [provenance, setProvenance] = useState<ProvenanceGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mermaidRef = useRef<HTMLDivElement>(null);
+  const renderId = `provenance-${useId().replace(/[^\w-]/g, '')}`;
 
   useEffect(() => {
     if (!ldGraph) {
@@ -266,7 +267,7 @@ export default function FileProvenanceViewer({
     const renderDiagram = async () => {
       try {
         const mermaidCode = generateMermaidDiagram(provenance);
-        const { svg } = await mermaid.render('provenance-diagram', mermaidCode);
+        const { svg } = await mermaid.render(renderId, mermaidCode);
         setSvgContent(svg);
       } catch (error) {
         console.error('Error rendering Mermaid diagram:', error);
@@ -274,7 +275,7 @@ export default function FileProvenanceViewer({
       }
     };
     renderDiagram();
-  }, [provenance]);
+  }, [provenance, renderId]);
 
   if (error || !provenance) {
     return (
