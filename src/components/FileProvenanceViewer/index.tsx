@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import mermaid from 'mermaid';
+import mermaid from '../../util/mermaid';
 import { Table, DataTable, type UniqueRow, type Column } from '@primer/react/experimental';
 import { JsonController, ROCrate } from '@nfdi4plants/arctrl';
 import type { TreeNode } from '../../util/types';
@@ -27,17 +27,6 @@ interface ProvenanceGraph {
 type LDGraph = ReturnType<typeof JsonController.LDGraph.fromROCrateJsonString>;
 type LDContext = Parameters<typeof ROCrate.LDLabProcess.validate>[1];
 type LDNode = Parameters<typeof ROCrate.LDLabProcess.validate>[0];
-
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'default',
-  flowchart: {
-    padding: 10,
-    nodeSpacing: 30,
-    rankSpacing: 40,
-  },
-  securityLevel: 'loose'
-});
 
 // Helper functions
 function resolveOption<T>(opt: any, defaultValue: T): T {
