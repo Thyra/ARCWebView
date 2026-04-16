@@ -112,55 +112,50 @@ function extractProvenance(ldGraph: LDGraph): ProvenanceGraph | null {
 
     const processes = getAllProcesses(ldGraph, context as LDContext);
 
+    const addNodeIfMissing = (node: LDNode) => {
+      if (!nodeMap[node.id]) {
+        const provNode: ProvenanceNode = {
+          id: node.id,
+          label: node.id,
+          type: node.AdditionalType?.[0] || node.SchemaType?.[0] || "Unknown",
+          metadata: extractNodeMetadata(node, ldGraph, context as LDContext),
+        };
+        nodeMap[node.id] = provNode;
+        nodes.push(provNode);
+      }
+    };
+
     processes.forEach((process) => {
       const inputs = ROCrate.LDLabProcess.getObjects(process, ldGraph, context as LDContext);
       const outputs = ROCrate.LDLabProcess.getResults(process, ldGraph, context as LDContext);
 
-      if (inputs.length > 0 && outputs.length > 0) {
-        const input = inputs[0];
-        const output = outputs[0];
+      if (inputs.length === 0 || outputs.length === 0) return;
 
-        // Add input node if not exists
-        if (!nodeMap[input.id]) {
-          const inputNode: ProvenanceNode = {
-            id: input.id,
-            label: input.id,
-            type: input.AdditionalType?.[0] || input.SchemaType?.[0] || "Unknown",
-            metadata: extractNodeMetadata(input, ldGraph, context as LDContext),
-          };
-          nodeMap[input.id] = inputNode;
-          nodes.push(inputNode);
-        }
-
-        // Add output node if not exists
-        if (!nodeMap[output.id]) {
-          const outputNode: ProvenanceNode = {
-            id: output.id,
-            label: output.id,
-            type: output.AdditionalType?.[0] || output.SchemaType?.[0] || "Unknown",
-            metadata: extractNodeMetadata(output, ldGraph, context as LDContext),
-          };
-          nodeMap[output.id] = outputNode;
-          nodes.push(outputNode);
-        }
-
-        // Add edge
-        let processLabel = process.id;
-        const protocol = ROCrate.LDLabProcess.tryGetExecutesLabProtocol(process, ldGraph, context as LDContext);
-        if (protocol) {
-          processLabel = resolveOption(
-            ROCrate.LDLabProtocol.tryGetNameAsString(protocol as LDNode, context as LDContext),
-            (protocol as LDNode).id
-          );
-        }
-
-        edges.push({
-          from: input.id,
-          to: output.id,
-          label: processLabel,
-          metadata: extractNodeMetadata(process, ldGraph, context as LDContext),
-        });
+      let processLabel = process.id;
+      const protocol = ROCrate.LDLabProcess.tryGetExecutesLabProtocol(process, ldGraph, context as LDContext);
+      if (protocol) {
+        processLabel = resolveOption(
+          ROCrate.LDLabProtocol.tryGetNameAsString(protocol as LDNode, context as LDContext),
+          (protocol as LDNode).id
+        );
       }
+      const processMetadata = extractNodeMetadata(process, ldGraph, context as LDContext);
+
+      inputs.forEach(addNodeIfMissing);
+      outputs.forEach(addNodeIfMissing);
+
+      // In ARC data, processes are flattened to 1:1, but the ROCrate spec
+      // permits input/output arrays — emit an edge for every input×output pair.
+      inputs.forEach((input) => {
+        outputs.forEach((output) => {
+          edges.push({
+            from: input.id,
+            to: output.id,
+            label: processLabel,
+            metadata: processMetadata,
+          });
+        });
+      });
     });
 
     return { nodes, edges };
