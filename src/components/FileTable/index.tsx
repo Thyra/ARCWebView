@@ -1,10 +1,11 @@
-import { useState } from 'react'
-import {IconButton, Link, Truncate, useResponsiveValue } from '@primer/react'
+import { lazy, Suspense, useState } from 'react'
+import {IconButton, Link, Spinner, Truncate, useResponsiveValue } from '@primer/react'
 import {Table, DataTable, Dialog} from '@primer/react/experimental'
 import { JsonController } from '@nfdi4plants/arctrl'
 import { type TreeNode } from '../../util/types'
 import Icons from '../Icons'
-import FileProvenanceViewer from '../FileProvenanceViewer'
+
+const FileProvenanceViewer = lazy(() => import('../FileProvenanceViewer'))
 
 type LDGraph = ReturnType<typeof JsonController.LDGraph.fromROCrateJsonString>;
 
@@ -213,10 +214,12 @@ export default function FileTable({ loading, currentTreeNode, navigateTo, ldGrap
           width="xlarge"
           height="large"
         >
-          <FileProvenanceViewer
-            fileNode={selectedFileForProvenance}
-            ldGraph={ldGraph}
-          />
+          <Suspense fallback={<div style={{ padding: '24px', textAlign: 'center' }}><Spinner /></div>}>
+            <FileProvenanceViewer
+              fileNode={selectedFileForProvenance}
+              ldGraph={ldGraph}
+            />
+          </Suspense>
         </Dialog>
       )}
     </>
