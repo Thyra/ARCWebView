@@ -187,20 +187,33 @@ function escapeMermaidLabel(text: string): string {
     .replace(/[\r\n]+/g, ' ');
 }
 
+// Builds a Mermaid `flowchart TD` source string from our provenance graph.
 function generateMermaidDiagram(graph: ProvenanceGraph): string {
   const nodes = graph.nodes.map((node) => {
+    // ROCrate ids like "#Sample_DB40" aren't valid Mermaid node ids — strip
+    // anything that isn't a word char or hyphen.
     const safeId = node.id.replace(/[^\w-]/g, '_');
+    // Same constraint applies to classDef class names.
     const typeClass = node.type.replace(/[^\w-]/g, '_').toLowerCase() || 'unknown';
+    // Drop the ROCrate id prefix from the visible label so nodes show e.g.
+    // "DB40" instead of "#Sample_DB40".
     const cleanLabel = node.label.replace(/^#(Source_|Sample_)/, '');
+    // <br/> and <sub> are part of Mermaid's own label vocabulary and survive
+    // securityLevel: 'strict'; user-supplied substrings get HTML-entity-encoded
+    // by escapeMermaidLabel so they can't break out of the "..." or inject tags.
     return `${safeId}["${escapeMermaidLabel(cleanLabel)}<br/><sub>${escapeMermaidLabel(node.type)}</sub>"]:::${typeClass}`;
   }).join('\n    ');
 
   const edges = graph.edges.map((edge) => {
     const fromId = edge.from.replace(/[^\w-]/g, '_');
     const toId = edge.to.replace(/[^\w-]/g, '_');
+    // Quoted edge label (`|"..."|`) is the Mermaid form that tolerates escaped
+    // special chars inside the label.
     return `${fromId} -->|"${escapeMermaidLabel(edge.label)}"| ${toId}`;
   }).join('\n    ');
 
+  // One classDef per node type we recognize, plus a fallback. The class suffix
+  // `:::typeClass` on each node above picks one of these.
   const classDefinitions = `
     classDef sample fill:#8957e5,stroke:#6f42c1,stroke-width:2px,color:#fff,font-size:12px,padding:8px
     classDef labprocess fill:#1f6feb,stroke:#0969da,stroke-width:2px,color:#fff,font-size:12px,padding:8px
